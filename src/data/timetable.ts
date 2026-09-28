@@ -6,6 +6,9 @@
 
 import { WeeklySchedule } from '../types';
 
+export const SEMESTER_START = new Date('2026-08-29');
+export const SEMESTER_END = new Date('2026-11-29');
+
 export const SUBJECTS_BY_SECTION: Record<string, string[]> = {
   'II-BME': [
     'Transforms and Boundary Value Problems',
