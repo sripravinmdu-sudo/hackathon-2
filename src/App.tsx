@@ -10,18 +10,26 @@ import { WhatIfSimulator } from './components/WhatIfSimulator';
 import { Planner } from './components/Planner';
 import { InsightsPanel } from './components/InsightsPanel';
 import { IrreversibleBanner } from './components/IrreversibleBanner';
+import { LoginPanel } from './components/LoginPanel';
 
 type ActiveTab = 'forecast' | 'planner' | 'insights';
 
 export default function App() {
-  const [view, setView] = useState<'setup' | 'dashboard'>('setup');
-  const [section, setSection] = useState('A');
+  const [view, setView] = useState<'login' | 'setup' | 'dashboard'>('login');
+  const [username, setUsername] = useState<string>('');
+  const [section, setSection] = useState('II-BME');
   const [planningDate, setPlanningDate] = useState('');
   const [subjects, setSubjects] = useState<SubjectInput[]>([]);
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
   const [whatIfClasses, setWhatIfClasses] = useState(5);
   const [activeTab, setActiveTab] = useState<ActiveTab>('forecast');
+
+  const handleLogin = (user: string, userSection: string) => {
+    setUsername(user);
+    setSection(userSection);
+    setView('setup');
+  };
 
   const handleGenerate = useCallback(
     (data: { section: string; planningDate: string; subjects: SubjectInput[] }) => {
@@ -64,6 +72,10 @@ export default function App() {
           : 'IRREVERSIBLE'
     : undefined;
 
+  if (view === 'login') {
+    return <LoginPanel onLogin={handleLogin} />;
+  }
+
   return (
     <div className="min-h-screen">
       <Navbar
@@ -77,7 +89,7 @@ export default function App() {
 
       <main className="pt-14">
         {view === 'setup' ? (
-          <SetupPanel onGenerate={handleGenerate} />
+          <SetupPanel onGenerate={handleGenerate} userSection={section} />
         ) : (
           dashboard && (
             <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">

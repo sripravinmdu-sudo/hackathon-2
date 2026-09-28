@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { SubjectInput } from '../types';
-import { SUBJECTS, SECTIONS, DEMO_ATTENDANCE, SEMESTER_START, SEMESTER_END } from '../data/timetable';
+import { SUBJECTS_BY_SECTION, SECTIONS, getDemoAttendanceForSubject, SEMESTER_START, SEMESTER_END } from '../data/timetable';
 import { Logo } from './Logo';
 
 interface SetupPanelProps {
@@ -9,23 +9,27 @@ interface SetupPanelProps {
     planningDate: string;
     subjects: SubjectInput[];
   }) => void;
+  userSection: string;
 }
 
-export function SetupPanel({ onGenerate }: SetupPanelProps) {
-  const [section, setSection] = useState('A');
+export function SetupPanel({ onGenerate, userSection }: SetupPanelProps) {
+  const [section, setSection] = useState(userSection);
   const [planningDate, setPlanningDate] = useState('');
   const [subjects, setSubjects] = useState<SubjectInput[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const today = new Date();
 
-  // Initialize subjects with demo data
   useEffect(() => {
-    const initial: SubjectInput[] = SUBJECTS.map((name, i) => ({
-      id: `subj-${i}`,
-      name,
-      attended: DEMO_ATTENDANCE[name]?.attended ?? 0,
-      conducted: DEMO_ATTENDANCE[name]?.conducted ?? 0,
-    }));
+    const sectionSubjects = SUBJECTS_BY_SECTION[section] || [];
+    const initial: SubjectInput[] = sectionSubjects.map((name, i) => {
+      const demo = getDemoAttendanceForSubject(name);
+      return {
+        id: `subj-${i}`,
+        name,
+        attended: demo.attended,
+        conducted: demo.conducted,
+      };
+    });
     setSubjects(initial);
 
     // Default planning date: 4 weeks from today
@@ -124,12 +128,21 @@ export function SetupPanel({ onGenerate }: SetupPanelProps) {
               <label className="label-subtle mb-2 block">Class Section</label>
               <select
                 value={section}
-                onChange={e => setSection(e.target.value)}
+                onChange={e => {
+                  setSection(e.target.value);
+                  // Update subjects based on selected section
+                  const sectionSubjects = SUBJECTS_BY_SECTION[e.target.value] || [];
+                  const initial: SubjectInput[] = sectionSubjects.map((name, i) => {
+                    const demo = getDemoAttendanceForSubject(name);
+                    return { id: `subj-${i}`, name, attended: demo.attended, conducted: demo.conducted };
+                  });
+                  setSubjects(initial);
+                }}
                 className="input-field w-full"
               >
                 {SECTIONS.map(s => (
                   <option key={s} value={s}>
-                    Section {s}
+                    {s}
                   </option>
                 ))}
               </select>

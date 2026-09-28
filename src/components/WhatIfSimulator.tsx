@@ -15,15 +15,29 @@ export function WhatIfSimulator({ subjects, whatIfClasses, onWhatIfChange }: Wha
   const totalConducted = subjects.reduce((s, x) => s + x.conducted, 0);
   const totalRemaining = subjects.reduce((s, x) => s + x.remaining, 0);
 
-  // Distribute whatIfClasses proportionally across subjects by remaining count
+  // Exactly distribute whatIfClasses across subjects to guarantee exact sum
   let futureAtt = 0;
-  for (const s of subjects) {
-    const share =
-      totalRemaining === 0
-        ? 0
-        : Math.min(s.remaining, Math.round((s.remaining / totalRemaining) * whatIfClasses));
-    futureAtt += share;
+  let remainingClassesToDistribute = whatIfClasses;
+  
+  // Sort subjects by highest remaining to give them classes first (fair distribution)
+  const sortedSubjects = [...subjects].sort((a, b) => b.remaining - a.remaining);
+  
+  while (remainingClassesToDistribute > 0 && sortedSubjects.some(s => s.remaining > 0)) {
+    for (const s of sortedSubjects) {
+      if (remainingClassesToDistribute > 0 && s.remaining > 0) {
+        // give 1 class
+        s.remaining -= 1; // temporarily mutate for calculation
+        futureAtt += 1;
+        remainingClassesToDistribute -= 1;
+      }
+    }
   }
+
+  // Restore original remaining values since we mutated them for the loop above
+  sortedSubjects.forEach(s => {
+    const original = subjects.find(x => x.id === s.id);
+    if(original) s.remaining = original.remaining;
+  });
   const displayPct = projectedAttendance(totalAttended, totalConducted, totalRemaining, futureAtt);
 
   const currentPct =
@@ -169,11 +183,23 @@ export function WhatIfSimulator({ subjects, whatIfClasses, onWhatIfChange }: Wha
       <div className="mt-6 pt-6 border-t border-white/[0.06]">
         <p className="text-xs text-white/40 mb-3 uppercase tracking-widest">Impact per subject</p>
         <div className="space-y-2">
-          {subjects.map(s => {
-            const share =
-              totalRemaining === 0
-                ? 0
-                : Math.min(s.remaining, Math.round((s.remaining / totalRemaining) * whatIfClasses));
+          {subjects.map((s, idx) => {
+            // Re-run the exact distribution algorithm per subject to get its specific share
+            let share = 0;
+            let tempRemainingToDistribute = whatIfClasses;
+            const tempSubjects = subjects.map(sub => ({ ...sub }));
+            const tempSorted = [...tempSubjects].sort((a, b) => b.remaining - a.remaining);
+            
+            while (tempRemainingToDistribute > 0 && tempSorted.some(sub => sub.remaining > 0)) {
+              for (const sub of tempSorted) {
+                if (tempRemainingToDistribute > 0 && sub.remaining > 0) {
+                  if (sub.id === s.id) share++;
+                  sub.remaining -= 1;
+                  tempRemainingToDistribute -= 1;
+                }
+              }
+            }
+
             const proj = projectedAttendance(s.attended, s.conducted, s.remaining, share);
             const diff = proj - s.percentage;
             return (
